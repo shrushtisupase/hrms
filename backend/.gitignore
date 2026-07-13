@@ -1,0 +1,65 @@
+# ---------------------------------------------------------------------------
+# Dependencies (Never commit these, they are managed via package managers)
+# ---------------------------------------------------------------------------
+node_modules/
+jspm_packages/
+web_modules/
+
+# ---------------------------------------------------------------------------
+# Environment Variables & Secrets (CRITICAL: Protects API keys and passwords)
+# ---------------------------------------------------------------------------
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+*.env
+
+# ---------------------------------------------------------------------------
+# Build & Compilation Outputs (Generated code files)
+# ---------------------------------------------------------------------------
+dist/
+build/
+out/
+.cache/
+
+# ---------------------------------------------------------------------------
+# Logs & Debug Files
+# ---------------------------------------------------------------------------
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# ---------------------------------------------------------------------------
+# Testing & Code Coverage
+# ---------------------------------------------------------------------------
+coverage/
+.nyc_output/
+.jest/
+
+# ---------------------------------------------------------------------------
+# IDEs, Editors, and OS-specific Files
+# ---------------------------------------------------------------------------
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Windows
+Thumbs.db
+ehthumbs.db
+desktop.ini
+
+# IDES (VS Code, WebStorm, etc.)
+.vscode/
+!.vscode/extensions.json
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
