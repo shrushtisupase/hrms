@@ -1,7 +1,7 @@
-const mongoose = require('mongoose');
+import mongoose from "mongoose";
 
 const userSchema = new mongoose.Schema({
-  // Authentication & Core Identity
+  // authentication & core identity
   employeeId: { type: String, required: true, unique: true },
   email: { type: String, required: true, unique: true, lowercase: true },
   password: { type: String, required: true }, 
@@ -11,7 +11,7 @@ const userSchema = new mongoose.Schema({
     default: 'EMPLOYEE' 
   },
 
-  // Enhanced Profile Details
+  // enhanced profile details
   firstName: { type: String, required: true },
   lastName: { type: String, required: true },
   profilePicture: { type: String }, 
@@ -23,14 +23,14 @@ const userSchema = new mongoose.Schema({
   contactNumber: { type: String },
   address: { type: String },
   
-  // Employment Details
+  // employment details
   department: { type: mongoose.Schema.Types.ObjectId, ref: 'Department' },
   designation: { type: String },
   joiningDate: { type: Date, required: true },
   isActive: { type: Boolean, default: true },
 
-  // Base Payroll (Simplified to prevent duplication)
+  // base payroll 
   basicSalary: { type: Number, default: 0 }
 }, { timestamps: true });
 
-module.exports = mongoose.model('User', userSchema);
+export default mongoose.model("User", userSchema);
