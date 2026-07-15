@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useAuthStore } from "../store/authStore.js";
 import api from "../utils/api.js";
 import dayjs from "dayjs";
-import { Calendar, Plus, Check, X, Loader2, MessageSquare } from "lucide-react";
+import { Calendar, Plus, Check, X, Loader2, MessageSquare, AlertTriangle } from "lucide-react";
 
 // leave manager portal
 export default function Leaves() {
@@ -31,8 +31,12 @@ export default function Leaves() {
     try {
       setLoading(true);
       setError("");
-      const res = await api.get("/leaves");
-      // filter list on client side based on view type
+      let res;
+      if (isAdminOrHR) {
+        res = await api.get("/leaves");
+      } else {
+        res = await api.get("/leaves/my-history");
+      }
       setLeaves(res.data.leaves || []);
     } catch (err) {
       console.error(err);
@@ -102,8 +106,41 @@ export default function Leaves() {
     }
   };
 
-  const myLeaves = leaves.filter((l) => l.employee?._id === user?.id);
-  const staffLeaves = leaves.filter((l) => l.employee?._id !== user?.id);
+  const myLeaves = isAdminOrHR
+    ? leaves.filter((l) => (typeof l.employee === "object" ? l.employee?._id : l.employee) === user?.id)
+    : leaves;
+  const staffLeaves = isAdminOrHR
+    ? leaves.filter((l) => (typeof l.employee === "object" ? l.employee?._id : l.employee) !== user?.id)
+    : [];
+
+  const getLeaveBalances = (targetUserId) => {
+    const userApprovedLeaves = leaves.filter(
+      (l) => {
+        const empId = typeof l.employee === "object" ? l.employee?._id : l.employee;
+        return String(empId) === String(targetUserId) && l.status === "APPROVED";
+      }
+    );
+
+    const sickUsed = userApprovedLeaves
+      .filter((l) => l.leaveType === "SICK")
+      .reduce((sum, l) => sum + (l.days || 0), 0);
+
+    const casualUsed = userApprovedLeaves
+      .filter((l) => l.leaveType === "CASUAL")
+      .reduce((sum, l) => sum + (l.days || 0), 0);
+
+    const annualUsed = userApprovedLeaves
+      .filter((l) => l.leaveType === "ANNUAL")
+      .reduce((sum, l) => sum + (l.days || 0), 0);
+
+    return {
+      sick: Math.max(0, 12 - sickUsed),
+      casual: Math.max(0, 10 - casualUsed),
+      annual: Math.max(0, 15 - annualUsed),
+    };
+  };
+
+  const myBalances = getLeaveBalances(user?.id);
 
   return (
     <div className="flex-grow w-full bg-zinc-50 dark:bg-bg-dark-obsidian flex flex-col overflow-hidden relative select-none">
@@ -163,16 +200,41 @@ export default function Leaves() {
         </div>
       )}
 
-      {error && (
-        <div className="mx-6 mb-3 p-3 bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-900/50 rounded-lg text-center text-xs font-semibold text-red-600 dark:text-red-400">
-          {error}
-        </div>
-      )}
+
 
       {/* scrollable requests logs list */}
       <div className="flex-1 overflow-y-auto px-6 pb-4 no-scrollbar flex flex-col gap-3">
+        {viewType === "my" && !loading && (
+          <div className="grid grid-cols-3 gap-2.5 mb-1.5 shrink-0">
+            <div className="bg-white dark:bg-bg-dark-card border border-zinc-100 dark:border-zinc-900 rounded-xl p-3 text-center shadow-xs">
+              <span className="text-[9px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider block">
+                casual leaves
+              </span>
+              <span className="text-sm font-extrabold text-zinc-950 dark:text-white mt-1 block">
+                {myBalances.casual} / 10
+              </span>
+            </div>
+            <div className="bg-white dark:bg-bg-dark-card border border-zinc-100 dark:border-zinc-900 rounded-xl p-3 text-center shadow-xs">
+              <span className="text-[9px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider block">
+                sick leaves
+              </span>
+              <span className="text-sm font-extrabold text-zinc-950 dark:text-white mt-1 block">
+                {myBalances.sick} / 12
+              </span>
+            </div>
+            <div className="bg-white dark:bg-bg-dark-card border border-zinc-100 dark:border-zinc-900 rounded-xl p-3 text-center shadow-xs">
+              <span className="text-[9px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider block">
+                annual leaves
+              </span>
+              <span className="text-sm font-extrabold text-zinc-950 dark:text-white mt-1 block">
+                {myBalances.annual} / 15
+              </span>
+            </div>
+          </div>
+        )}
+
         {loading ? (
-          <div className="flex-1 flex items-center justify-center">
+          <div className="flex-grow flex items-center justify-center">
             <Loader2 className="w-6 h-6 animate-spin text-zinc-950 dark:text-white" />
           </div>
         ) : (viewType === "my" ? myLeaves : staffLeaves).length > 0 ? (
@@ -205,6 +267,15 @@ export default function Leaves() {
                   {record.status.toLowerCase()}
                 </span>
               </div>
+
+              {viewType === "staff" && record.employee && (
+                <div className="text-[9.5px] font-bold text-zinc-400 dark:text-zinc-500 bg-zinc-50/50 dark:bg-bg-dark-obsidian/45 p-2 rounded-lg border border-zinc-100 dark:border-zinc-900/60 flex items-center justify-around">
+                  <span className="uppercase text-[8.5px] tracking-wider text-zinc-500 dark:text-zinc-400">balance:</span>
+                  <span>sick: {getLeaveBalances(record.employee?._id || record.employee).sick}/12</span>
+                  <span>casual: {getLeaveBalances(record.employee?._id || record.employee).casual}/10</span>
+                  <span>annual: {getLeaveBalances(record.employee?._id || record.employee).annual}/15</span>
+                </div>
+              )}
 
               {/* reason details */}
               <div className="text-xs text-zinc-500 dark:text-zinc-400 font-medium bg-zinc-50 dark:bg-bg-dark-obsidian/60 p-2.5 rounded-lg">
@@ -261,11 +332,21 @@ export default function Leaves() {
               )}
             </div>
           ))
+        ) : error ? (
+          <div className="flex-1 flex flex-col items-center justify-center text-center p-8">
+            <AlertTriangle className="w-8 h-8 text-red-500 mb-2 animate-bounce" />
+            <p className="text-xs text-red-500 font-bold">
+              failed to retrieve leave history
+            </p>
+            <span className="text-[10px] text-zinc-400 dark:text-zinc-600 font-medium mt-1">
+              please verify your network connection or try again.
+            </span>
+          </div>
         ) : (
           <div className="flex-1 flex flex-col items-center justify-center text-center p-8">
             <Calendar className="w-8 h-8 text-zinc-300 dark:text-zinc-800 mb-2" />
             <p className="text-xs text-zinc-400 dark:text-zinc-650 font-medium">
-              no leave request records found
+              no leave requests available
             </p>
           </div>
         )}

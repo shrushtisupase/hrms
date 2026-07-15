@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useAuthStore } from "../store/authStore.js";
 import api from "../utils/api.js";
 import dayjs from "dayjs";
-import { Calendar, Search, SlidersHorizontal, Loader2 } from "lucide-react";
+import { Calendar, Search, SlidersHorizontal, Loader2, AlertTriangle } from "lucide-react";
 
 // logs list screen
 export default function Attendance() {
@@ -13,6 +13,7 @@ export default function Attendance() {
   const [searchEmail, setSearchEmail] = useState("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
+  const [showDateFilter, setShowDateFilter] = useState(false);
   const [error, setError] = useState("");
 
   const isAdminOrHR = user?.role === "ADMIN" || user?.role === "HR";
@@ -22,16 +23,16 @@ export default function Attendance() {
       setLoading(true);
       setError("");
       
+      const params = {};
+      if (startDate) params.startDate = startDate;
+      if (endDate) params.endDate = endDate;
+
       let res;
       if (viewType === "my") {
-        res = await api.get("/attendance/my-history", {
-          params: { startDate, endDate },
-        });
+        res = await api.get("/attendance/my-history", { params });
         setHistory(res.data.history || []);
       } else {
-        res = await api.get("/attendance/report", {
-          params: { startDate, endDate },
-        });
+        res = await api.get("/attendance/report", { params });
         
         let filtered = res.data.records || [];
         if (searchEmail) {
@@ -110,38 +111,44 @@ export default function Attendance() {
           </div>
         )}
 
-        <div className="grid grid-cols-2 gap-2">
-          <div>
-            <label className="text-[10px] font-bold text-zinc-400 dark:text-zinc-600 uppercase tracking-wider pl-1">
-              start date
-            </label>
-            <input
-              type="date"
-              value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
-              className="w-full bg-white dark:bg-bg-dark-card border border-zinc-100 dark:border-zinc-900 rounded-lg px-3 py-2 text-xs text-zinc-950 dark:text-white"
-            />
-          </div>
+        <button
+          onClick={() => setShowDateFilter(!showDateFilter)}
+          className="w-full py-2 bg-zinc-50 dark:bg-bg-dark-obsidian border border-zinc-200 dark:border-zinc-800 text-zinc-950 dark:text-white font-bold text-xs rounded-xl flex items-center justify-center gap-1.5 cursor-pointer active:scale-95 transition-spring hover:bg-zinc-100 dark:hover:bg-zinc-900 shadow-xs mb-2"
+        >
+          <Calendar className="w-3.5 h-3.5 text-zinc-400" />
+          <span>{showDateFilter ? "hide date filters" : "filter by date"}</span>
+        </button>
 
-          <div>
-            <label className="text-[10px] font-bold text-zinc-400 dark:text-zinc-600 uppercase tracking-wider pl-1">
-              end date
-            </label>
-            <input
-              type="date"
-              value={endDate}
-              onChange={(e) => setEndDate(e.target.value)}
-              className="w-full bg-white dark:bg-bg-dark-card border border-zinc-100 dark:border-zinc-900 rounded-lg px-3 py-2 text-xs text-zinc-950 dark:text-white"
-            />
+        {showDateFilter && (
+          <div className="grid grid-cols-2 gap-2 mt-1 animate-slide-down">
+            <div>
+              <label className="text-[10px] font-bold text-zinc-400 dark:text-zinc-650 uppercase tracking-wider pl-1">
+                start date
+              </label>
+              <input
+                type="date"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                className="w-full bg-white dark:bg-bg-dark-card border border-zinc-100 dark:border-zinc-900 rounded-lg px-3 py-2 text-xs text-zinc-950 dark:text-white"
+              />
+            </div>
+
+            <div>
+              <label className="text-[10px] font-bold text-zinc-400 dark:text-zinc-655 uppercase tracking-wider pl-1">
+                end date
+              </label>
+              <input
+                type="date"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+                className="w-full bg-white dark:bg-bg-dark-card border border-zinc-100 dark:border-zinc-900 rounded-lg px-3 py-2 text-xs text-zinc-950 dark:text-white"
+              />
+            </div>
           </div>
-        </div>
+        )}
       </div>
 
-      {error && (
-        <div className="mx-6 mb-4 p-3 bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-900/50 rounded-lg text-center text-xs font-semibold text-red-600 dark:text-red-400">
-          {error}
-        </div>
-      )}
+
 
       {/* logs list container */}
       <div className="flex-1 overflow-y-auto px-6 pb-4 no-scrollbar flex flex-col gap-3">
@@ -192,11 +199,21 @@ export default function Attendance() {
               </div>
             </div>
           ))
+        ) : error ? (
+          <div className="flex-1 flex flex-col items-center justify-center text-center p-8">
+            <AlertTriangle className="w-8 h-8 text-red-500 mb-2 animate-bounce" />
+            <p className="text-xs text-red-500 font-bold">
+              failed to load attendance logs
+            </p>
+            <span className="text-[10px] text-zinc-400 dark:text-zinc-500 font-medium mt-1">
+              please verify your network connection or try again.
+            </span>
+          </div>
         ) : (
           <div className="flex-1 flex flex-col items-center justify-center text-center p-8">
             <Calendar className="w-8 h-8 text-zinc-300 dark:text-zinc-800 mb-2" />
-            <p className="text-xs text-zinc-400 dark:text-zinc-600 font-medium">
-              no attendance records found
+            <p className="text-xs text-zinc-400 dark:text-zinc-650 font-medium">
+              no logs available for this period
             </p>
           </div>
         )}

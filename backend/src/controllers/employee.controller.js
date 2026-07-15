@@ -24,7 +24,7 @@ export const getMyProfile = async (req, res) => {
 // update self profile details
 export const updateMyProfile = async (req, res) => {
   try {
-    const { firstName, lastName, dateOfBirth, gender, contactNumber, address } = req.body;
+    const { firstName, lastName, dateOfBirth, gender, contactNumber, address, bankAccount, bankName, ifscCode } = req.body;
 
     const updated = await User.findByIdAndUpdate(
       req.user.id,
@@ -35,6 +35,9 @@ export const updateMyProfile = async (req, res) => {
         ...(gender && { gender }),
         ...(contactNumber && { contactNumber }),
         ...(address && { address }),
+        ...(bankAccount && { bankAccount }),
+        ...(bankName && { bankName }),
+        ...(ifscCode && { ifscCode }),
       },
       { new: true }
     ).populate("department");

@@ -4,6 +4,7 @@ import User from "../models/user.model.js";
 import Attendance from "../models/attendance.model.js";
 import Leave from "../models/leave.model.js";
 import Payroll from "../models/payroll.model.js";
+import Resignation from "../models/resignation.model.js";
 
 dayjs.extend(utc);
 
@@ -17,19 +18,36 @@ export const getDashboardStats = async (req, res) => {
     // 1. total headcount
     const totalEmployees = await User.countDocuments({ isActive: true });
 
-    // 2. present headcount today
+    // 2. detailed attendance snapshot today
     const presentToday = await Attendance.countDocuments({
       date: today,
-      status: { $in: ["PRESENT", "LATE", "HALF_DAY"] },
+      status: { $in: ["PRESENT", "LATE", "EARLY_EXIT", "HALF_DAY"] },
     });
 
-    // 3. on-leave headcount today
-    const onLeaveToday = await Attendance.countDocuments({
+    const lateToday = await Attendance.countDocuments({
       date: today,
-      status: "LEAVE",
+      status: "LATE"
     });
 
-    // 4. monthly payroll summary (processed/paid)
+    const earlyExitToday = await Attendance.countDocuments({
+      date: today,
+      status: "EARLY_EXIT"
+    });
+
+    const halfDayToday = await Attendance.countDocuments({
+      date: today,
+      status: "HALF_DAY"
+    });
+
+    const onLeaveToday = await Leave.countDocuments({
+      status: "APPROVED",
+      startDate: { $lte: today },
+      endDate: { $gte: today }
+    });
+
+    const absentToday = Math.max(0, totalEmployees - presentToday - onLeaveToday);
+
+    // 3. monthly payroll summary (processed/paid)
     const payrollSummary = await Payroll.aggregate([
       {
         $match: {
@@ -49,7 +67,24 @@ export const getDashboardStats = async (req, res) => {
 
     const totalExpenditure = payrollSummary.length > 0 ? payrollSummary[0].totalExpenditure : 0;
 
-    // 5. recent activities (last 5 leaves applied, last 5 check-ins)
+    // 4. monthly payroll trends (past 6 runs)
+    const payrollTrends = await Payroll.aggregate([
+      {
+        $group: {
+          _id: { month: "$month", year: "$year" },
+          totalPayout: { $sum: "$netSalary" },
+        }
+      },
+      { $sort: { "_id.year": -1, "_id.month": -1 } },
+      { $limit: 6 }
+    ]);
+
+    // 5. resignation clearances summary
+    const resignationCount = await Resignation.countDocuments();
+    const pendingClearanceCount = await Resignation.countDocuments({ status: "PENDING" });
+    const completedClearanceCount = await Resignation.countDocuments({ status: "APPROVED" });
+
+    // 6. recent activities (last 5 leaves applied, last 5 check-ins)
     const recentLeaves = await Leave.find()
       .populate("employee", "firstName lastName employeeId")
       .sort({ createdAt: -1 })
@@ -65,9 +100,17 @@ export const getDashboardStats = async (req, res) => {
       stats: {
         totalEmployees,
         presentToday,
+        lateToday,
+        earlyExitToday,
+        halfDayToday,
         onLeaveToday,
+        absentToday,
         monthlyPayrollExpenditure: totalExpenditure,
+        resignationCount,
+        pendingClearanceCount,
+        completedClearanceCount
       },
+      payrollTrends,
       recentActivities: {
         recentLeaves,
         recentCheckins,

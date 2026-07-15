@@ -23,11 +23,19 @@ export const checkIn = async (req, res) => {
       });
     }
 
+    const localTime = dayjs(checkInTime).utcOffset(330);
+    const hour = localTime.hour();
+    const minute = localTime.minute();
+    let status = "PRESENT";
+    if (hour > 9 || (hour === 9 && minute > 30)) {
+      status = "LATE";
+    }
+
     const attendance = await Attendance.create({
       employee: req.user.id,
       date: today,
       checkIn: checkInTime,
-      status: "PRESENT",
+      status,
     });
 
     return res.status(201).json({
@@ -74,9 +82,13 @@ export const checkOut = async (req, res) => {
     const hoursWorked = Math.round((diffMs / (1000 * 60 * 60)) * 100) / 100;
 
     // update status based on hours
-    let status = "PRESENT";
+    let status = attendance.status;
     if (hoursWorked < 4) {
       status = "HALF_DAY";
+    } else if (hoursWorked < 8) {
+      status = "EARLY_EXIT";
+    } else if (status !== "LATE") {
+      status = "PRESENT";
     }
 
     attendance.checkOut = checkOutTime;

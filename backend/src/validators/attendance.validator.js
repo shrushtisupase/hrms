@@ -5,10 +5,10 @@ import utc from "dayjs/plugin/utc.js";
 dayjs.extend(utc);
 
 const utcDate = z.preprocess((val) => {
-  if (!val) return undefined;
+  if (!val || val === "") return undefined;
   const parsed = dayjs.utc(val);
   return parsed.isValid() ? parsed.toDate() : new Date("invalid");
-}, z.date({ invalid_type_error: "invalid date format" }));
+}, z.date({ invalid_type_error: "invalid date format" }).optional());
 
 const objectId = z.string().regex(/^[0-9a-fA-F]{24}$/, "invalid id format");
 

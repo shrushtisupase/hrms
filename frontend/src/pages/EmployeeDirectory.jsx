@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../utils/api.js";
-import { Search, Building2, Users, ArrowRight, Loader2 } from "lucide-react";
+import { Search, Building2, Users, ArrowRight, Loader2, ArrowLeft } from "lucide-react";
 
 // dedicated staff directory view for admin and hr
 export default function EmployeeDirectory() {
@@ -57,7 +57,13 @@ export default function EmployeeDirectory() {
   return (
     <div className="flex-1 w-full bg-zinc-50 dark:bg-bg-dark-obsidian flex flex-col overflow-hidden select-none">
       {/* header title */}
-      <div className="px-6 pt-4 pb-3 flex items-center justify-between">
+      <div className="px-6 pt-4 pb-3 flex items-center gap-3">
+        <button
+          onClick={() => navigate("/admin")}
+          className="p-2 bg-white dark:bg-bg-dark-card border border-zinc-100 dark:border-zinc-900 rounded-lg cursor-pointer active:scale-95 transition-spring shadow-xs"
+        >
+          <ArrowLeft className="w-4 h-4 text-zinc-950 dark:text-white" />
+        </button>
         <div>
           <h2 className="text-2xl font-bold text-zinc-950 dark:text-white tracking-tight">
             staff directory

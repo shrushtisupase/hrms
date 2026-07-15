@@ -5,6 +5,7 @@ import {
   getAllPayrolls,
   updatePayrollStatus,
   downloadPayslip,
+  downloadBankFile,
 } from "../controllers/payroll.controller.js";
 import { protect, restrictTo } from "../middlewares/auth.middleware.js";
 import { validate } from "../middlewares/validate.middleware.js";
@@ -18,6 +19,7 @@ const router = Router();
 // protect all payroll routes
 router.use(protect);
 
+router.get("/bank-file", restrictTo("ADMIN", "HR"), downloadBankFile);
 router.get("/my-history", getMyPayrollHistory);
 router.get("/:id/payslip", downloadPayslip);
 

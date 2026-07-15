@@ -30,7 +30,12 @@ const userSchema = new mongoose.Schema({
   isActive: { type: Boolean, default: true },
 
   // base payroll 
-  basicSalary: { type: Number, default: 0 }
+  basicSalary: { type: Number, default: 0 },
+
+  // bank details
+  bankAccount: { type: String, default: "MOCK-BANK-123456" },
+  bankName: { type: String, default: "Mock National Bank" },
+  ifscCode: { type: String, default: "MOCK0001234" }
 }, { timestamps: true });
 
 export default mongoose.model("User", userSchema);

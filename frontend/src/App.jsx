@@ -11,6 +11,9 @@ import Profile from "./pages/Profile.jsx";
 import AdminConsole from "./pages/AdminConsole.jsx";
 import EmployeeDirectory from "./pages/EmployeeDirectory.jsx";
 import EmployeeProfileDetail from "./pages/EmployeeProfileDetail.jsx";
+import ResignationPortal from "./pages/ResignationPortal.jsx";
+import AdminClearanceConsole from "./pages/AdminClearanceConsole.jsx";
+import AdminAnalyticsDashboard from "./pages/AdminAnalyticsDashboard.jsx";
 
 // routing layout for authenticated sessions
 function ProtectedLayout() {
@@ -62,10 +65,13 @@ export default function App() {
             <Route path="/logs" element={<Attendance />} />
             <Route path="/leaves" element={<Leaves />} />
             <Route path="/profile" element={<Profile />} />
+            <Route path="/resignation" element={<ResignationPortal />} />
 
             {/* admin console route restriction */}
             <Route element={<AdminLayout />}>
               <Route path="/admin" element={<AdminConsole />} />
+              <Route path="/admin/clearance" element={<AdminClearanceConsole />} />
+              <Route path="/admin/analytics" element={<AdminAnalyticsDashboard />} />
               <Route path="/employees" element={<EmployeeDirectory />} />
               <Route path="/employees/:id" element={<EmployeeProfileDetail />} />
             </Route>

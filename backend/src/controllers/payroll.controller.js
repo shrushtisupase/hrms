@@ -86,9 +86,21 @@ export const generateMonthlyPayroll = async (req, res) => {
 
       // calculate daily rate and deductions
       const dailyRate = workingDays > 0 ? basic / workingDays : 0;
-      const deductions = Math.round(totalUnpaidDays * dailyRate * 100) / 100;
-      const allowances = 0;
-      const netSalary = Math.max(0, Math.round((basic + allowances - deductions) * 100) / 100);
+      const absencesDeduction = Math.round(totalUnpaidDays * dailyRate * 100) / 100;
+      
+      const grossEarnings = Math.max(0, Math.round((basic - absencesDeduction) * 100) / 100);
+      const basicComponent = Math.round(grossEarnings * 0.5 * 100) / 100;
+      const hra = Math.round(grossEarnings * 0.3 * 100) / 100;
+      const specialAllowance = Math.max(0, Math.round((grossEarnings - basicComponent - hra) * 100) / 100);
+      
+      // deductions
+      const pf = Math.round(basicComponent * 0.12 * 100) / 100;
+      const pt = grossEarnings > 0 ? 200 : 0;
+      const tds = Math.round(grossEarnings * 0.1 * 100) / 100;
+      const taxDeductions = Math.round((pf + pt + tds) * 100) / 100;
+      
+      const totalDeductions = Math.round((absencesDeduction + taxDeductions) * 100) / 100;
+      const netSalary = Math.max(0, Math.round((grossEarnings - taxDeductions) * 100) / 100);
 
       // upsert payroll record for employee
       const payroll = await Payroll.findOneAndUpdate(
@@ -99,8 +111,14 @@ export const generateMonthlyPayroll = async (req, res) => {
           paidLeaves,
           unpaidLeaves: totalUnpaidDays,
           basicSalary: basic,
-          allowances,
-          deductions,
+          hra,
+          specialAllowance,
+          pf,
+          pt,
+          tds,
+          absencesDeduction,
+          allowances: 0,
+          deductions: totalDeductions,
           netSalary,
           status: "DRAFT",
         },
@@ -263,16 +281,11 @@ export const downloadPayslip = async (req, res) => {
     doc.text(`employee name: ${payroll.employee.firstName} ${payroll.employee.lastName}`, col1X, currentY + 20);
     doc.text(`email: ${payroll.employee.email}`, col1X, currentY + 40);
 
-    doc.text(`basic salary: $${payroll.basicSalary.toFixed(2)}`, col2X, currentY);
+    doc.text(`basic salary: Rs. ${payroll.basicSalary.toFixed(2)}`, col2X, currentY);
     doc.text(`working days: ${payroll.workingDays}`, col2X, currentY + 20);
     doc.text(`present days: ${payroll.presentDays}`, col2X, currentY + 40);
 
     doc.moveDown(4);
-    currentY = doc.y;
-
-    // divider
-    doc.moveTo(50, currentY).lineTo(550, currentY).stroke();
-    doc.moveDown(1);
     currentY = doc.y;
 
     // breakdown
@@ -282,11 +295,17 @@ export const downloadPayslip = async (req, res) => {
     currentY = doc.y;
 
     doc.fontSize(10);
-    doc.text(`base salary: $${payroll.basicSalary.toFixed(2)}`, 50, currentY);
-    doc.text(`allowances: $${payroll.allowances.toFixed(2)}`, 50, currentY + 20);
+    const baseVal = payroll.basicSalary * 0.5;
+    doc.text(`basic pay (50%): Rs. ${(payroll.hra ? baseVal : payroll.basicSalary).toFixed(2)}`, 50, currentY);
+    doc.text(`hra (30%): Rs. ${(payroll.hra || 0).toFixed(2)}`, 50, currentY + 20);
+    doc.text(`special allowance (20%): Rs. ${(payroll.specialAllowance || 0).toFixed(2)}`, 50, currentY + 40);
 
-    doc.text(`unpaid absences: $${payroll.deductions.toFixed(2)}`, 300, currentY);
-    doc.text(`other deductions: $0.00`, 300, currentY + 20);
+    doc.text(`unpaid absences: Rs. ${(payroll.absencesDeduction || 0).toFixed(2)}`, 300, currentY);
+    doc.text(`provident fund (pf 12%): Rs. ${(payroll.pf || 0).toFixed(2)}`, 300, currentY + 20);
+    doc.text(`professional tax (pt): Rs. ${(payroll.pt || 0).toFixed(2)}`, 300, currentY + 40);
+    doc.text(`income tax (tds 10%): Rs. ${(payroll.tds || 0).toFixed(2)}`, 300, currentY + 60);
+
+    doc.moveDown(5);
 
     doc.moveDown(4);
     currentY = doc.y;
@@ -297,7 +316,7 @@ export const downloadPayslip = async (req, res) => {
     currentY = doc.y;
 
     // total
-    doc.fontSize(12).text(`net payable: $${payroll.netSalary.toFixed(2)}`, 50, currentY, { bold: true });
+    doc.fontSize(12).text(`net payable: Rs. ${payroll.netSalary.toFixed(2)}`, 50, currentY, { bold: true });
     doc.text(`payment status: ${payroll.status.toLowerCase()}`, 300, currentY);
 
     if (payroll.paymentDate) {
@@ -314,5 +333,63 @@ export const downloadPayslip = async (req, res) => {
         message: "internal server error",
       });
     }
+  }
+};
+
+// download bank dispatch file (admin/hr only)
+export const downloadBankFile = async (req, res) => {
+  try {
+    const { month, year } = req.query;
+    if (!month || !year) {
+      return res.status(400).json({
+        success: false,
+        message: "month and year query parameters are required",
+      });
+    }
+
+    const filter = {
+      month: parseInt(month, 10),
+      year: parseInt(year, 10),
+    };
+
+    const payrolls = await Payroll.find(filter)
+      .populate("employee", "firstName lastName employeeId email bankAccount bankName ifscCode");
+
+    if (payrolls.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "no payroll records found for the specified period",
+      });
+    }
+
+    // compile csv lines
+    let csvContent = "Employee ID,Employee Name,Bank Name,Bank Account,IFSC Code,Net Salary,Status\n";
+    
+    payrolls.forEach((p) => {
+      const emp = p.employee || {};
+      const empId = emp.employeeId || "N/A";
+      const name = `${emp.firstName || ""} ${emp.lastName || ""}`.trim();
+      const bankName = emp.bankName || "Mock National Bank";
+      const bankAcc = emp.bankAccount || "MOCK-BANK-123456";
+      const ifsc = emp.ifscCode || "MOCK0001234";
+      const netPay = p.netSalary.toFixed(2);
+      const status = p.status;
+      
+      csvContent += `"${empId}","${name}","${bankName}","${bankAcc}","${ifsc}",${netPay},"${status}"\n`;
+    });
+
+    res.setHeader("Content-Type", "text/csv");
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename=payroll-bank-file-${month}-${year}.csv`
+    );
+
+    return res.status(200).send(csvContent);
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({
+      success: false,
+      message: "internal server error",
+    });
   }
 };

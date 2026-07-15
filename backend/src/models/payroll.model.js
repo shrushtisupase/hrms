@@ -13,6 +13,12 @@ const payrollSchema = new mongoose.Schema({
 
   // financial snapshot
   basicSalary: { type: Number, required: true },
+  hra: { type: Number, default: 0 },
+  specialAllowance: { type: Number, default: 0 },
+  pf: { type: Number, default: 0 },
+  pt: { type: Number, default: 0 },
+  tds: { type: Number, default: 0 },
+  absencesDeduction: { type: Number, default: 0 },
   allowances: { type: Number, default: 0 },
   deductions: { type: Number, default: 0 },
   netSalary: { type: Number, required: true },

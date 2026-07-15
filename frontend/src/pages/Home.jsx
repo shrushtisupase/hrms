@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useAuthStore } from "../store/authStore.js";
 import api from "../utils/api.js";
 import dayjs from "dayjs";
@@ -9,6 +10,7 @@ dayjs.extend(utc);
 
 // principal dashboard dashboard
 export default function Home() {
+  const navigate = useNavigate();
   const { user } = useAuthStore();
   const [stats, setStats] = useState(null);
   const [attendance, setAttendance] = useState(null);
@@ -205,6 +207,26 @@ export default function Home() {
                   {stats.stats.onLeaveToday}
                 </span>
               </div>
+            </div>
+          )}
+
+          {/* administrative navigation shortcuts */}
+          {isAdminOrHR && (
+            <div className="w-full flex flex-col gap-2">
+              <button
+                onClick={() => navigate("/logs")}
+                className="w-full py-4 border border-zinc-200 dark:border-zinc-800 text-zinc-950 dark:text-white font-bold text-xs rounded-xl flex items-center justify-center gap-2 cursor-pointer active:scale-95 transition-spring hover:bg-zinc-50 dark:hover:bg-zinc-900 shadow-xs"
+              >
+                <Clock className="w-4 h-4 text-zinc-400" />
+                <span>view global attendance history</span>
+              </button>
+              <button
+                onClick={() => navigate("/leaves")}
+                className="w-full py-4 border border-zinc-200 dark:border-zinc-800 text-zinc-950 dark:text-white font-bold text-xs rounded-xl flex items-center justify-center gap-2 cursor-pointer active:scale-95 transition-spring hover:bg-zinc-50 dark:hover:bg-zinc-900 shadow-xs"
+              >
+                <CalendarCheck className="w-4 h-4 text-zinc-400" />
+                <span>review employee leave requests</span>
+              </button>
             </div>
           )}
 

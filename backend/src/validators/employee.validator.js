@@ -21,6 +21,9 @@ export const updateProfileSchema = z.object({
     gender: z.enum(["MALE", "FEMALE", "OTHER", "PREFER_NOT_TO_SAY"]).optional(),
     contactNumber: z.string().optional(),
     address: z.string().optional(),
+    bankAccount: z.string().optional(),
+    bankName: z.string().optional(),
+    ifscCode: z.string().optional(),
   }).optional().default({}),
 });
 
@@ -39,6 +42,9 @@ export const updateEmployeeSchema = z.object({
     joiningDate: utcDate.optional(),
     isActive: z.boolean().optional(),
     basicSalary: z.number().nonnegative().optional(),
+    bankAccount: z.string().optional(),
+    bankName: z.string().optional(),
+    ifscCode: z.string().optional(),
   }).optional().default({}),
   params: z.object({
     id: objectId,

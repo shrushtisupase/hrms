@@ -217,7 +217,7 @@ export default function EmployeeProfileDetail() {
               <div className="grid grid-cols-2 gap-4 border-b border-zinc-100 dark:border-zinc-900 pb-3">
                 <div>
                   <span className="text-[10px] font-semibold text-zinc-400 dark:text-zinc-500 uppercase block">basic monthly salary</span>
-                  <span className="text-xs font-bold text-zinc-950 dark:text-white block mt-0.5">${employee?.basicSalary?.toFixed(2) || "0.00"}</span>
+                  <span className="text-xs font-bold text-zinc-955 dark:text-white block mt-0.5">₹{employee?.basicSalary?.toFixed(2) || "0.00"}</span>
                 </div>
                 <div>
                   <span className="text-[10px] font-semibold text-zinc-400 dark:text-zinc-500 uppercase block">joining date</span>

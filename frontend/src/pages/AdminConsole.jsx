@@ -175,6 +175,25 @@ export default function AdminConsole() {
     }
   };
 
+  const handleDownloadBankFile = async () => {
+    setError("");
+    setSuccess("");
+    try {
+      const res = await api.get("/payroll/bank-file", {
+        params: { month: payMonth, year: payYear },
+        responseType: "blob",
+      });
+      const blob = new Blob([res.data], { type: "text/csv" });
+      const link = document.createElement("a");
+      link.href = window.URL.createObjectURL(blob);
+      link.download = `payroll-bank-file-${payMonth}-${payYear}.csv`;
+      link.click();
+      setSuccess("bank file exported successfully");
+    } catch (err) {
+      setError("no payroll records found for this period to export bank file");
+    }
+  };
+
   return (
     <div className="flex-1 w-full bg-zinc-50 dark:bg-bg-dark-obsidian flex flex-col overflow-hidden select-none">
       {/* console sub-header */}
@@ -243,10 +262,19 @@ export default function AdminConsole() {
           <>
             {/* sub-view 1: staff management */}
             {activeSubTab === "staff" && (
-              <div className="bg-white dark:bg-bg-dark-card border border-zinc-100 dark:border-zinc-900 rounded-xl p-4 shadow-sm flex flex-col gap-4">
-                <h3 className="text-xs font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider border-b border-zinc-100 dark:border-zinc-900 pb-2">
-                  onboard new employee
-                </h3>
+              <>
+                <button
+                  onClick={() => navigate("/employees")}
+                  className="w-full py-4 border border-zinc-200 text-zinc-950 dark:border-zinc-850 dark:text-white font-bold text-xs rounded-xl flex items-center justify-center gap-2 cursor-pointer active:scale-95 transition-spring hover:bg-zinc-50 dark:hover:bg-zinc-900 shadow-xs mb-1"
+                >
+                  <Users className="w-4 h-4 text-zinc-400" />
+                  <span>browse active staff directory</span>
+                </button>
+
+                <div className="bg-white dark:bg-bg-dark-card border border-zinc-100 dark:border-zinc-900 rounded-xl p-4 shadow-sm flex flex-col gap-4">
+                  <h3 className="text-xs font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider border-b border-zinc-100 dark:border-zinc-900 pb-2">
+                    onboard new employee
+                  </h3>
                 <form onSubmit={handleRegisterEmployee} className="flex flex-col gap-3.5">
                   <div className="grid grid-cols-2 gap-2.5">
                     <div className="flex flex-col gap-1">
@@ -384,6 +412,7 @@ export default function AdminConsole() {
                   </button>
                 </form>
               </div>
+              </>
             )}
 
             {/* sub-view 2: department management */}
@@ -494,10 +523,18 @@ export default function AdminConsole() {
                   <button
                     onClick={handleGeneratePayroll}
                     disabled={loading}
-                    className="py-3 bg-brand-primary hover:bg-brand-primary/95 text-white font-bold text-xs rounded-lg cursor-pointer active:scale-95 transition-spring shadow-sm flex items-center justify-center gap-1.5"
+                    className="py-3 bg-brand-primary hover:bg-brand-primary/95 text-white font-bold text-xs rounded-lg cursor-pointer active:scale-95 transition-spring shadow-sm flex items-center justify-center gap-1.5 mb-2"
                   >
                     {loading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : null}
                     <span>execute payroll calculation</span>
+                  </button>
+
+                  <button
+                    onClick={handleDownloadBankFile}
+                    disabled={loading}
+                    className="py-3 border border-zinc-200 text-zinc-950 dark:border-zinc-800 dark:text-white font-bold text-xs rounded-lg cursor-pointer active:scale-95 transition-spring flex items-center justify-center gap-1.5 hover:bg-zinc-50 dark:hover:bg-zinc-900"
+                  >
+                    <span>download bank disbursement csv file</span>
                   </button>
                 </div>
 
@@ -527,7 +564,7 @@ export default function AdminConsole() {
                               {p.employee?.firstName} {p.employee?.lastName}
                             </span>
                             <span className="text-[10px] text-zinc-400 dark:text-zinc-500 font-medium">
-                              net salary: ${p.netSalary?.toFixed(2)}
+                              net salary: ₹{p.netSalary?.toFixed(2)}
                             </span>
                           </div>
                           <span
